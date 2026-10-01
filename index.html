@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Garden Simulator</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="p-3 bg-[#131a12] text-gray-100 min-h-screen font-sans">
+
+  <!-- HEADER -->
+  <header class="glass-panel p-3 rounded-xl mb-3 flex items-center justify-between">
+    <div>
+      <h1 class="text-lg font-bold text-emerald-200">Dynamic Garden v0.5</h1>
+      <p class="text-[10px] text-emerald-400">DSA Dynamic Engine</p>
+    </div>
+    <div class="flex gap-2 text-xs">
+      <div class="bg-black/40 px-2.5 py-1 rounded-lg border border-emerald-800">
+        <span class="text-amber-400 font-extrabold" id="coins-display">💰 150</span>
+      </div>
+      <div class="bg-black/40 px-2.5 py-1 rounded-lg border border-emerald-800">
+        <span class="text-emerald-300 font-extrabold" id="mutation-count">✨ 0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CLIMATE BANNER -->
+  <div id="climate-banner" class="glass-panel p-2.5 rounded-xl mb-3 flex items-center justify-between border-amber-500/40">
+    <div class="text-xs font-bold text-amber-300">
+      ⚡ Weather: <span id="climate-status" class="text-white font-normal">Normal</span>
+    </div>
+    <button onclick="triggerClimateEvent()" class="px-2 py-1 bg-amber-600 text-white text-[10px] rounded-lg font-bold">Trigger Climate</button>
+  </div>
+
+  <!-- NAVIGATION TABS -->
+  <div class="flex bg-black/40 p-1 rounded-xl mb-3 text-xs">
+    <button onclick="switchTab('game')" id="tab-game" class="flex-1 py-1.5 rounded-lg font-bold bg-[#283623] text-emerald-100">🎮 Garden & Grid</button>
+    <button onclick="switchTab('code')" id="tab-code" class="flex-1 py-1.5 rounded-lg font-bold text-emerald-400/80">💻 Code Editor</button>
+  </div>
+
+  <!-- MAIN VIEW: GAMEPLAY -->
+  <div id="view-game" class="space-y-3">
+
+    <!-- PET COMPANION BOX -->
+    <div id="pet-companion-card" class="glass-panel p-3 rounded-xl flex items-center justify-between border border-teal-800/60 shadow-lg">
+      <div class="flex items-center gap-3">
+        <!-- Pet Avatar Icon with Pulse Animation -->
+        <div id="pet-avatar" class="w-10 h-10 rounded-xl bg-teal-950/80 border border-teal-700/50 flex items-center justify-center text-xl relative">
+          🐾
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="pet-name" class="font-extrabold text-xs text-slate-400">No Pet Active</span>
+            <span id="pet-status-badge" class="text-[9px] px-1.5 py-0.2 rounded font-bold bg-slate-800 text-slate-400">INACTIVE</span>
+          </div>
+          <div id="pet-buff-desc" class="text-[10px] text-teal-300/80 mt-0.5">Adopt a companion from the Tools & Pets shop!</div>
+        </div>
+      </div>
+
+      <!-- Live Stats Counter -->
+      <div class="text-right">
+        <div class="text-[9px] text-slate-400 font-mono">PET BUFF</div>
+        <div id="pet-stat-value" class="text-xs font-black text-teal-400">--</div>
+      </div>
+    </div>
+
+    <!-- GRID & SELECTOR -->
+    <div class="glass-panel p-3 rounded-xl">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-xs font-bold text-emerald-300">5x5 Garden Plots</span>
+        <select id="crop-selector" class="bg-black/60 border border-emerald-700 text-emerald-100 text-xs rounded-lg px-2 py-1"></select>
+      </div>
+
+      <!-- 5x5 GRID -->
+      <div id="garden-grid" class="grid grid-cols-5 gap-1.5 my-2"></div>
+    </div>
+
+    <!-- INSPECTOR PANEL -->
+    <div class="glass-panel p-3 rounded-xl">
+      <h2 class="text-xs font-bold text-amber-300 mb-1">🔍 Plant Inspector</h2>
+      <div id="inspector-body" class="text-[11px] text-slate-400">Click a plant on the grid to inspect...</div>
+    </div>
+
+    <!-- MARKET & STORAGE (2-COLUMN GRID FOR MOBILE) -->
+    <div class="grid grid-cols-2 gap-2">
+      <!-- Nursery Market -->
+      <div class="glass-panel p-3 rounded-xl">
+        <h2 class="text-xs font-bold text-amber-300 mb-2">🛒 Seed Nursery</h2>
+        <div id="seed-market-list" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
+      </div>
+
+      <!-- Tools Shop -->
+      <div class="glass-panel p-3 rounded-xl">
+        <h2 class="text-xs font-bold text-blue-300 mb-2">🛠️ Gear Shop</h2>
+        <div id="tools-shop-list" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <!-- STORAGE & HARVEST (2-COLUMN) -->
+    <div class="grid grid-cols-2 gap-2">
+      <div class="glass-panel p-3 rounded-xl">
+        <h2 class="text-xs font-bold text-blue-300 mb-1">💧 Water Storage</h2>
+        <div id="water-text" class="text-[11px] font-bold text-emerald-200 mb-1">120/200 L</div>
+        <div class="w-full bg-black/60 h-2 rounded-full overflow-hidden">
+          <div id="water-bar" class="bg-blue-500 h-full rounded-full" style="width: 60%"></div>
+        </div>
+      </div>
+
+      <div class="glass-panel p-3 rounded-xl">
+        <h2 class="text-xs font-bold text-emerald-300 mb-1">📦 Harvest Storage</h2>
+        <div id="harvest-inventory" class="space-y-1 max-h-28 overflow-y-auto text-[11px]"></div>
+      </div>
+    </div>
+
+    <!-- VISUAL PLANT CLASSIFICATION HIERARCHY (TOPIC 4 TREE VISUALIZER) -->
+    <div class="glass-panel p-3 rounded-xl">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-xs font-bold text-emerald-300 flex items-center gap-1">
+          🌳 Plant Classification Hierarchy (Tree Data Structure)
+        </h2>
+        <span class="text-[9px] text-emerald-400 font-mono">Topic 4</span>
+      </div>
+      <div id="tree-visualizer" class="bg-black/60 p-2.5 rounded-lg border border-emerald-900/60 font-mono text-[11px] text-emerald-200 overflow-x-auto space-y-1">
+        <div class="text-amber-300 font-bold">🪴 Garden Registry (ROOT)</div>
+        <div class="pl-3 border-l border-emerald-800/80 space-y-1 mt-1">
+          <div>
+            <span class="text-amber-200 font-semibold">├── 🌸 Flowers Category (BRANCH)</span>
+            <div class="pl-4 border-l border-dashed border-emerald-900 space-y-0.5 text-[10px] text-emerald-300">
+              <div>└── 🍃 Rose (Common)</div>
+              <div>└── 🍃 Sunflower (Rare)</div>
+              <div>└── 🍃 Lavender (Rare)</div>
+              <div>└── 🍃 Cherry Blossom (Epic)</div>
+              <div>└── 💎 Crystal Rose (Prismatic)</div>
+            </div>
+          </div>
+          <div>
+            <span class="text-amber-200 font-semibold">├── 🌵 Succulents Category (BRANCH)</span>
+            <div class="pl-4 border-l border-dashed border-emerald-900 space-y-0.5 text-[10px] text-emerald-300">
+              <div>└── 🌵 Cactus (Epic)</div>
+            </div>
+          </div>
+          <div>
+            <span class="text-amber-200 font-semibold">├── 🌾 Crops & Fruits Category (BRANCH)</span>
+            <div class="pl-4 border-l border-dashed border-emerald-900 space-y-0.5 text-[10px] text-emerald-300">
+              <div>└── 🍃 Tomato (Common)</div>
+              <div>└── 🍃 Carrot (Common)</div>
+              <div>└── 🍃 Corn (Uncommon)</div>
+              <div>└── 🍎 Golden Apple Tree (Legendary)</div>
+              <div>└── 🪷 Orchid (Legendary)</div>
+              <div>└── 🐉 Dragon Fruit (Mythic)</div>
+              <div>└── 🌙 Moonflower (Mythic)</div>
+            </div>
+          </div>
+          <div>
+            <span class="text-amber-200 font-semibold">└── 🌌 Cosmic & Divine Category (BRANCH)</span>
+            <div class="pl-4 border-l border-dashed border-emerald-900 space-y-0.5 text-[10px] text-emerald-300">
+              <div>└── 🌳 Rainbow Tree (Prismatic)</div>
+              <div>└── 🌌 Yggdrasil Seedling (Divine)</div>
+              <div>└── 🔥 Phoenix Fern (Divine)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTION LOGS -->
+    <div class="glass-panel p-3 rounded-xl">
+      <h3 class="text-xs font-bold text-emerald-400 mb-1">📜 Event Queue Logs</h3>
+      <div id="action-stack" class="space-y-1 max-h-28 overflow-y-auto"></div>
+    </div>
+
+  </div>
+
+  <!-- MAIN VIEW: CODE EDITOR -->
+  <div id="view-code" class="glass-panel p-3 rounded-xl hidden flex-col space-y-2">
+    <h2 class="text-xs font-bold text-white">Student Code Editor (Python)</h2>
+    <select id="topic-selector" onchange="loadTopic()" class="w-full bg-black/60 border border-emerald-700 rounded-lg p-2 text-xs text-emerald-200"></select>
+    <textarea id="code-editor" class="w-full bg-black/80 border border-emerald-800 rounded-lg p-2 text-xs text-emerald-300 code-font min-h-[180px]" spellcheck="false"></textarea>
+    <button onclick="runPythonCode()" class="w-full bg-emerald-600 hover:bg-emerald-500 py-2 rounded-lg font-bold text-white text-xs">Run Python Engine</button>
+    <div id="output-console" class="bg-black/90 border border-emerald-900 rounded-lg p-2 text-[10px] max-h-32 overflow-y-auto font-mono text-emerald-400">Click "Run Python Engine" to execute.</div>
+  </div>
+
+  <script>
+    // Idinagdag dito ang climate event function para hindi magka-error ang trigger button sa HTML
+    function triggerClimateEvent() {
+      const weatherEvents = [
+        { name: "☀️ Heatwave (Faster Growth)", effect: "growth" },
+        { name: "🌧️ Heavy Monsoons (Water Refilled)", effect: "water" },
+        { name: "🌪️ Dust Storm (Risk to unshielded plots)", effect: "storm" }
+      ];
+      const currentEvent = weatherEvents[Math.floor(Math.random() * weatherEvents.length)];
+      const statusElem = document.getElementById("climate-status");
+      if (statusElem) {
+        statusElem.innerText = currentEvent.name;
+      }
+      
+      if (typeof logAction === "function") {
+        logAction(`⚡ Climate Event Triggered: ${currentEvent.name}`);
+      }
+
+      if (currentEvent.effect === "water" && typeof gameState !== "undefined") {
+        gameState.water = Math.min(200, gameState.water + 50);
+        if (typeof renderUI === "function") renderUI();
+      }
+    }
+  </script>
+  <script src="script.js"></script>
+</body>
+</html>
